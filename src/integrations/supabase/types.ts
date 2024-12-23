@@ -9,7 +9,74 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      chat_archives: {
+        Row: {
+          api_key: string
+          chat_id: string
+          created_at: string | null
+          current_message_id: number | null
+          id: string
+          last_message_id: number | null
+          messages_checked: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          api_key: string
+          chat_id: string
+          created_at?: string | null
+          current_message_id?: number | null
+          id?: string
+          last_message_id?: number | null
+          messages_checked?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          api_key?: string
+          chat_id?: string
+          created_at?: string | null
+          current_message_id?: number | null
+          id?: string
+          last_message_id?: number | null
+          messages_checked?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      message_archives: {
+        Row: {
+          chat_archive_id: string | null
+          created_at: string | null
+          id: string
+          message_content: string
+          message_id: number
+        }
+        Insert: {
+          chat_archive_id?: string | null
+          created_at?: string | null
+          id?: string
+          message_content: string
+          message_id: number
+        }
+        Update: {
+          chat_archive_id?: string | null
+          created_at?: string | null
+          id?: string
+          message_content?: string
+          message_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_archives_chat_archive_id_fkey"
+            columns: ["chat_archive_id"]
+            isOneToOne: false
+            referencedRelation: "chat_archives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

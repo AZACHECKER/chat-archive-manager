@@ -96,6 +96,10 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-roboto;
   }
+}
+
+.font-roboto {
+  font-family: 'Roboto', sans-serif;
 }

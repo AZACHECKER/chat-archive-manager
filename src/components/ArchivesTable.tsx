@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,14 +15,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, MessageSquare, Key } from "lucide-react";
+import { Loader2, MessageSquare, Key, Trash2 } from "lucide-react";
 import { ChatArchive, MessageArchive } from "@/types/database";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { MessageList } from "./MessageList";
+import { useToast } from "@/hooks/use-toast";
 
 export const ArchivesTable = () => {
   const [selectedArchive, setSelectedArchive] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data: chatArchives, isLoading: isLoadingArchives } = useQuery({
     queryKey: ["chatArchives"],
@@ -53,6 +56,50 @@ export const ArchivesTable = () => {
     enabled: !!selectedArchive,
   });
 
+  useEffect(() => {
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'chat_archives'
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["chatArchives"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("chat_archives")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Успех",
+        description: "Архив успешно удален",
+      });
+    } catch (error) {
+      console.error("Ошибка удаления архива:", error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось удалить архив",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (isLoadingArchives) {
     return (
       <div className="flex justify-center p-4">
@@ -63,28 +110,34 @@ export const ArchivesTable = () => {
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
-      <h3 className="text-xl font-semibold mb-4">Archives</h3>
+      <h3 className="text-xl font-semibold mb-4 font-roboto">Архивы</h3>
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Chat ID</TableHead>
-            <TableHead>API Key</TableHead>
-            <TableHead>Messages Checked</TableHead>
-            <TableHead>Actions</TableHead>
+            <TableHead>ID Чата</TableHead>
+            <TableHead>Имя бота</TableHead>
+            <TableHead>API ключ</TableHead>
+            <TableHead>Отправитель</TableHead>
+            <TableHead>Получатель</TableHead>
+            <TableHead>Сообщений</TableHead>
+            <TableHead>Действия</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {chatArchives?.map((archive) => (
             <TableRow key={archive.id}>
               <TableCell>{archive.chat_id}</TableCell>
+              <TableCell>{archive.bot_name || "—"}</TableCell>
               <TableCell>
                 <span className="flex items-center gap-2">
                   <Key className="h-4 w-4" />
                   ••••••••
                 </span>
               </TableCell>
-              <TableCell>{archive.messages_checked}</TableCell>
-              <TableCell>
+              <TableCell>{archive.sender_chat_id || "—"}</TableCell>
+              <TableCell>{archive.receiver_chat_id || "—"}</TableCell>
+              <TableCell>{archive.messages_checked || 0}</TableCell>
+              <TableCell className="space-x-2">
                 <Dialog>
                   <DialogTrigger asChild>
                     <Button
@@ -93,16 +146,23 @@ export const ArchivesTable = () => {
                       onClick={() => setSelectedArchive(archive.id)}
                     >
                       <MessageSquare className="h-4 w-4 mr-2" />
-                      View Messages
+                      Сообщения
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
                     <DialogHeader>
-                      <DialogTitle>Message Archive - {archive.chat_id}</DialogTitle>
+                      <DialogTitle>Архив сообщений - {archive.chat_id}</DialogTitle>
                     </DialogHeader>
                     <MessageList messages={messages} isLoading={isLoadingMessages} />
                   </DialogContent>
                 </Dialog>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => handleDelete(archive.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </TableCell>
             </TableRow>
           ))}

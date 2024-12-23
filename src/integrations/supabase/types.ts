@@ -12,34 +12,43 @@ export type Database = {
       chat_archives: {
         Row: {
           api_key: string
+          bot_name: string | null
           chat_id: string
           created_at: string | null
           current_message_id: number | null
           id: string
           last_message_id: number | null
           messages_checked: number | null
+          receiver_chat_id: string | null
+          sender_chat_id: string | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
           api_key: string
+          bot_name?: string | null
           chat_id: string
           created_at?: string | null
           current_message_id?: number | null
           id?: string
           last_message_id?: number | null
           messages_checked?: number | null
+          receiver_chat_id?: string | null
+          sender_chat_id?: string | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
           api_key?: string
+          bot_name?: string | null
           chat_id?: string
           created_at?: string | null
           current_message_id?: number | null
           id?: string
           last_message_id?: number | null
           messages_checked?: number | null
+          receiver_chat_id?: string | null
+          sender_chat_id?: string | null
           updated_at?: string | null
           user_id?: string
         }

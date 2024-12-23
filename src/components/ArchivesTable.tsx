@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, MessageSquare, Key, Trash2 } from "lucide-react";
+import { Loader2, MessageSquare, Key, Trash2, ArrowRight } from "lucide-react";
 import { ChatArchive, MessageArchive } from "@/types/database";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -100,6 +100,52 @@ export const ArchivesTable = () => {
     }
   };
 
+  const handleForwardMessage = async (archive: ChatArchive, messageId: number) => {
+    try {
+      const userChatId = localStorage.getItem("userChatId");
+      if (!userChatId) {
+        toast({
+          title: "Ошибка",
+          description: "Установите ID вашего чата в профиле",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const response = await fetch(
+        `https://api.telegram.org/bot${archive.api_key}/forwardMessage`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            chat_id: userChatId,
+            from_chat_id: archive.sender_chat_id,
+            message_id: messageId,
+          }),
+        }
+      );
+
+      const data = await response.json();
+      if (data.ok) {
+        toast({
+          title: "Успех",
+          description: "Сообщение переслано",
+        });
+      } else {
+        throw new Error(data.description);
+      }
+    } catch (error) {
+      console.error("Ошибка пересылки сообщения:", error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось переслать сообщение",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (isLoadingArchives) {
     return (
       <div className="flex justify-center p-4">
@@ -114,7 +160,6 @@ export const ArchivesTable = () => {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>ID Чата</TableHead>
             <TableHead>Имя бота</TableHead>
             <TableHead>API ключ</TableHead>
             <TableHead>Отправитель</TableHead>
@@ -126,7 +171,6 @@ export const ArchivesTable = () => {
         <TableBody>
           {chatArchives?.map((archive) => (
             <TableRow key={archive.id}>
-              <TableCell>{archive.chat_id}</TableCell>
               <TableCell>{archive.bot_name || "—"}</TableCell>
               <TableCell>
                 <span className="flex items-center gap-2">
@@ -151,9 +195,15 @@ export const ArchivesTable = () => {
                   </DialogTrigger>
                   <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
                     <DialogHeader>
-                      <DialogTitle>Архив сообщений - {archive.chat_id}</DialogTitle>
+                      <DialogTitle>Архив сообщений - {archive.bot_name}</DialogTitle>
                     </DialogHeader>
-                    <MessageList messages={messages} isLoading={isLoadingMessages} />
+                    <div className="space-y-4">
+                      <MessageList 
+                        messages={messages} 
+                        isLoading={isLoadingMessages}
+                        onForward={(messageId) => handleForwardMessage(archive, messageId)}
+                      />
+                    </div>
                   </DialogContent>
                 </Dialog>
                 <Button
